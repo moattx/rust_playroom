@@ -1,0 +1,96 @@
+use rand::Rng;
+use std::fs;
+use std::fs::File;
+use std::io::Write;
+use std::path::Path;
+
+const FILENAME: &str = ".number";
+
+pub fn run() {
+    let mut random: i32;
+    if !Path::new(FILENAME).exists() {
+        File::create(FILENAME).expect("couldnt create file");
+    }
+
+    let mut content = fs::read_to_string(FILENAME).expect("Unable to read file");
+
+    if content.is_empty() {
+        fs::write(FILENAME, rand::thread_rng().gen_range(1..101).to_string())
+            .expect("Unable to write file");
+        // read it again
+        content = fs::read_to_string(FILENAME).expect("Unable to read file");
+    }
+
+    random = content.parse::<i32>().unwrap();
+
+    println!("lets play a game");
+    println!("the game we'll play is a guessing a game where you guess the number!");
+    let mut distance: i32 = 0;
+
+    'outer: loop {
+        print!("enter: ");
+        std::io::stdout().flush().unwrap();
+        let mut guess = String::from("");
+        /* read_line returns 1 if error and expecct is a built in if error thing */
+        std::io::stdin()
+            .read_line(&mut guess)
+            .expect("didnt recieve input");
+
+        if guess.trim_end().is_empty() {
+            println!("empty input! try again");
+            continue;
+        }
+        print!("you entered: {}", guess);
+
+        /*
+        if !guess.trim_end().bytes().all(|c| c.is_ascii_digit()) {
+            println!("not a number! try again");
+            continue;
+        }
+        */
+        for c in guess.trim_end().chars() {
+            if c.is_numeric() {
+                continue;
+            }
+            println!("not a number! try again");
+            continue 'outer;
+        }
+
+        let guess: i32 = guess.trim_end().parse::<i32>().unwrap();
+        if guess == random {
+            println!("correct!");
+
+            // update random number
+            fs::write(FILENAME, rand::thread_rng().gen_range(1..101).to_string())
+                .expect("Unable to write file");
+            content = fs::read_to_string(FILENAME).expect("Unable to read file");
+            random = content.parse::<i32>().unwrap();
+
+            println!("lets play again! (to exit please do ctrl + c)");
+            continue;
+        }
+        print!("{} is not correct! try again! ", guess);
+
+        if distance == 0 || distance == (guess - random).abs() {
+            println!();
+            distance = guess - random;
+            distance = distance.abs();
+            continue;
+        }
+
+        print!("(hint: you are getting ");
+
+        if distance < (guess - random).abs() {
+            println!("further)");
+            //dbg!(distance, (guess - random).abs(), random);
+            distance = guess - random;
+            distance = distance.abs();
+            continue;
+        }
+
+        println!("closer)");
+        //dbg!(distance, (guess - random).abs(), random);
+        distance = guess - random;
+        distance = distance.abs();
+    }
+}
